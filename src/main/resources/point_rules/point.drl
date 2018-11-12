@@ -1,0 +1,107 @@
+/*
+ * Copyright 2010 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package point_rules;
+ 
+import point.Point.PointDomain;
+
+global java.util.List list
+ 
+//add
+rule birthdayPoint  
+    // 过生日，则加10分，并且将当月交易比数翻倍后再计算积分  
+    salience 100  
+    lock-on-active true  
+    when  
+        $pointDomain : PointDomain(getBirthday()==true)  
+    then  
+        $pointDomain.setPoint($pointDomain.getPoint()+10);  
+        $pointDomain.setBuyNums($pointDomain.getBuyNums()*2);  
+        $pointDomain.setBuyMoney($pointDomain.getBuyMoney()*2);  
+        $pointDomain.setBillThisMonth($pointDomain.getBillThisMonth()*2);  
+          
+        $pointDomain.recordPointLog($pointDomain.getUserName(),"birthdayPoint",10);  
+end  
+  
+rule billThisMonthPoint  
+    // 2011-01-08 - 2011-08-08每月信用卡还款3次以上，每满3笔赠送30分  
+    salience 99  
+    lock-on-active true  
+    date-effective "2016-01-01"  
+    date-expires "2016-08-31"  
+    when  
+        $pointDomain : PointDomain(billThisMonth >= 3)  
+    then  
+        $pointDomain.setPoint($pointDomain.getPoint()+$pointDomain.getBillThisMonth()/3*30);  
+        $pointDomain.recordPointLog($pointDomain.getUserName(),"billThisMonthPoint",$pointDomain.getBillThisMonth()/3*30);  
+end  
+  
+rule buyMoneyPoint  
+    // 当月购物总金额100以上，每100元赠送10分  
+    salience 98  
+    lock-on-active true  
+    when  
+        $pointDomain : PointDomain(buyMoney >= 100)  
+    then  
+        $pointDomain.setPoint($pointDomain.getPoint()+ (int)$pointDomain.getBuyMoney()/100 * 10);  
+        $pointDomain.recordPointLog($pointDomain.getUserName(),"buyMoneyPoint",(int)$pointDomain.getBuyMoney()/100 * 10);  
+end  
+  
+rule buyNumsPoint  
+    // 当月购物次数5次以上，每五次赠送50分  
+    salience 97  
+    lock-on-active true  
+    when  
+        $pointDomain : PointDomain(buyNums >= 5)  
+    then  
+        $pointDomain.setPoint($pointDomain.getPoint()+$pointDomain.getBuyNums()/5 * 50);  
+        $pointDomain.recordPointLog($pointDomain.getUserName(),"buyNumsPoint",$pointDomain.getBuyNums()/5 * 50);  
+end  
+  
+rule allFitPoint  
+    // 特别的，如果全部满足了要求，则额外奖励100分  
+    salience 96  
+    lock-on-active true  
+    when  
+        $pointDomain:PointDomain(buyNums >= 5 && billThisMonth >= 3 && buyMoney >= 100)  
+    then  
+        $pointDomain.setPoint($pointDomain.getPoint()+ 100);  
+        $pointDomain.recordPointLog($pointDomain.getUserName(),"allFitPoint",100);  
+end  
+
+
+//sub
+rule subBackNumsPoint  
+    // 发生退货，扣减10分  
+    salience 10  
+    lock-on-active true  
+    when  
+        $pointDomain : PointDomain(backNums >= 1)  
+    then  
+        $pointDomain.setPoint($pointDomain.getPoint()-10);  
+        $pointDomain.recordPointLog($pointDomain.getUserName(),"subBackNumsPoint",-10);  
+end  
+  
+rule subBackMondyPoint  
+    // 退货金额大于100，扣减100分  
+    salience 9  
+    lock-on-active true  
+    when  
+        $pointDomain : PointDomain(backMondy >= 100)  
+    then  
+        $pointDomain.setPoint($pointDomain.getPoint()-100);  
+        $pointDomain.recordPointLog($pointDomain.getUserName(),"subBackMondyPoint",-100);  
+end  
